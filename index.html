@@ -392,8 +392,7 @@
                 
                 if (!transacaoData.valor || !transacaoData.data || !transacaoData.categoria) return;
                 
-                const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-                const basePath = `artifacts/${appId}/users/${userId}/transacoes`;
+                const basePath = `users/${userId}/transacoes`;
                 
                 try {
                     if (modoEdicao.ativo) {
@@ -545,8 +544,7 @@
                 if (deleteBtn) {
                     const id = deleteBtn.dataset.id;
                     acaoConfirmacao.callback = async () => {
-                        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-                        const docRef = doc(db, `artifacts/${appId}/users/${userId}/transacoes`, id);
+                        const docRef = doc(db, `users/${userId}/transacoes`, id);
                         try {
                             await deleteDoc(docRef);
                         } catch (error) {
@@ -621,8 +619,7 @@
             }
 
             function setupRealtimeListeners(uid) {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-                const transacoesRef = collection(db, `artifacts/${appId}/users/${uid}/transacoes`);
+                const transacoesRef = collection(db, `users/${uid}/transacoes`);
                 
                 onSnapshot(transacoesRef, (snapshot) => {
                     transacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -641,4 +638,4 @@
         });
     </script>
 </body>
-</html>
+</ht
