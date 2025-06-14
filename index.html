@@ -38,27 +38,28 @@
         h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
 
         /* Authentication page styling */
-        #auth-page { text-align: center; padding: 50px 20px; max-width: 450px; margin: 10vh auto; background-color: var(--container-bg); border-radius: 12px; box-shadow: 0 6px 20px var(--shadow-color); }
-        #auth-page h1 { font-size: 2.2em; margin-bottom: 15px; }
-        #auth-page p { font-size: 1.1em; color: var(--text-color); opacity: 0.8; margin-bottom: 30px;}
-        #login-btn { 
-            background: #ffffff; 
-            color: #444; 
-            padding: 10px 20px; 
-            border-radius: 8px; 
-            font-size: 1.1em; 
-            font-weight: 500; 
-            border: 1px solid #ddd; 
-            cursor: pointer; 
-            transition: background-color 0.3s, box-shadow 0.3s; 
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        #auth-page { text-align: center; padding: 40px; max-width: 450px; margin: 10vh auto; background-color: var(--container-bg); border-radius: 12px; box-shadow: 0 6px 20px var(--shadow-color); }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .auth-form h2 { font-size: 1.8em; margin-bottom: 20px; }
+        .auth-form input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; }
+        .auth-form button { width: 100%; padding: 12px; background-color: var(--primary-color); color: white; border: none; border-radius: 6px; font-size: 1.1em; cursor: pointer; transition: background-color 0.3s; }
+        .auth-form button:hover { background-color: #2980b9; }
+
+        .auth-toggle-link { color: var(--primary-color); cursor: pointer; margin-top: 20px; display: block; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 25px 0; color: #aaa; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+        .divider:not(:empty)::before { margin-right: .25em; }
+        .divider:not(:empty)::after { margin-left: .25em; }
+        
+        #google-login-btn { 
+            background: #ffffff; color: #444; padding: 10px 20px; border-radius: 8px; font-size: 1.1em; font-weight: 500; 
+            border: 1px solid #ddd; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; 
+            display: inline-flex; align-items: center; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        #login-btn:hover { background-color: #f7f7f7; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        #login-btn svg { width: 24px; height: 24px; }
-        #login-error { color: var(--error-color); margin-top: 15px; font-weight: bold; min-height: 20px; }
+        #google-login-btn:hover { background-color: #f7f7f7; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #google-login-btn svg { width: 24px; height: 24px; }
+        #auth-error { color: var(--error-color); margin-top: 15px; font-weight: bold; min-height: 20px; }
 
         /* Main application page styling */
         #app-page { display: none; }
@@ -106,9 +107,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 15px; border-bottom: 1px solid var(--border-color); text-align: left; white-space: nowrap; }
         th { background-color: var(--table-header-bg); }
-        tr.new-item { animation: slideIn 0.5s ease-out forwards, flash 1.5s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes flash { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(52, 152, 219, 0.2); } }
 
         .valor-receita { color: var(--success-color); font-weight: bold; }
         .valor-despesa { color: var(--error-color); font-weight: bold; }
@@ -139,13 +137,36 @@
 <body>
     <!-- Authentication Page: Shown only when the user is not logged in -->
     <div id="auth-page">
-        <h1>Central Financeira</h1>
-        <p>Acesse os seus dados de forma segura e permanente.</p>
-        <button id="login-btn">
+
+        <!-- Login Form -->
+        <div id="login-form" class="auth-form active">
+            <h2>Entrar na sua Conta</h2>
+            <form id="login-email-form">
+                <input type="email" id="login-email" placeholder="E-mail" required>
+                <input type="password" id="login-password" placeholder="Palavra-passe" required>
+                <button type="submit">Entrar</button>
+            </form>
+            <a id="show-register" class="auth-toggle-link">Não tem conta? Registe-se</a>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-form" class="auth-form">
+            <h2>Criar Nova Conta</h2>
+            <form id="register-email-form">
+                <input type="email" id="register-email" placeholder="E-mail" required>
+                <input type="password" id="register-password" placeholder="Palavra-passe (mín. 6 caracteres)" required>
+                <button type="submit">Registar</button>
+            </form>
+            <a id="show-login" class="auth-toggle-link">Já tem conta? Entrar</a>
+        </div>
+        
+        <div class="divider">ou</div>
+
+        <button id="google-login-btn">
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
-            <span>Entrar com Google</span>
+            <span>Continuar com Google</span>
         </button>
-        <p id="login-error"></p>
+        <p id="auth-error"></p>
     </div>
 
     <!-- Main Application Page: Shown after successful login -->
@@ -242,13 +263,12 @@
     <script type="module">
         // Import Firebase services
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             // --- 1. CONFIGURATION AND STATE VARIABLES ---
             
-            // This configuration connects the app to your specific Firebase project.
             const firebaseConfig = {
               apiKey: "AIzaSyBLP6bPmuHZwVAOggZw20lG-COJBfRO9ls",
               authDomain: "controle-financeiro-72771.firebaseapp.com",
@@ -269,14 +289,14 @@
             let filtroAtual = 'todos';
             let userId = null;
             let db, auth;
-            let unsubscribe; // To detach the Firestore listener on logout
+            let unsubscribe; 
             
             // --- 2. DOM ELEMENT SELECTORS ---
             const authPage = document.getElementById('auth-page');
             const appPage = document.getElementById('app-page');
-            const loginBtn = document.getElementById('login-btn');
+            const googleLoginBtn = document.getElementById('google-login-btn');
             const logoutBtn = document.getElementById('logout-btn');
-            const loginErrorP = document.getElementById('login-error');
+            const authErrorP = document.getElementById('auth-error');
             const userNameDisplay = document.getElementById('user-name-display');
             const dataInput = document.getElementById('data');
             const formTransacao = document.getElementById('form-transacao');
@@ -292,7 +312,13 @@
             const formTitle = document.getElementById('form-title');
             const submitBtn = document.getElementById('submit-btn');
             const cancelEditBtn = document.getElementById('cancel-edit-btn');
-            
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginEmailForm = document.getElementById('login-email-form');
+            const registerEmailForm = document.getElementById('register-email-form');
+            const showRegisterLink = document.getElementById('show-register');
+            const showLoginLink = document.getElementById('show-login');
+
             // --- 3. CORE FUNCTIONS ---
 
             const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -584,11 +610,11 @@
             });
             themeToggle.addEventListener('click', toggleTheme);
             
-            // --- 5. INITIALIZATION ---
+            // --- 5. INITIALIZATION & AUTH ---
             function initApp() {
-                if (!firebaseConfig || firebaseConfig.apiKey === "SUA_API_KEY") {
+                if (!firebaseConfig || firebaseConfig.apiKey.startsWith("AIzaSyA")) { // Simple check
                     console.error("Configuração do Firebase não encontrada ou não preenchida.");
-                    authPage.innerHTML = "<h1>Erro de Configuração</h1><p>As chaves do Firebase não foram preenchidas no código. Edite o arquivo HTML, adicione sua configuração e atualize o site.</p>";
+                    authPage.innerHTML = "<h1>Erro de Configuração</h1><p>As chaves do Firebase não foram preenchidas no código.</p>";
                     authPage.style.display = 'block';
                     return;
                 }
@@ -597,10 +623,10 @@
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
-                    setLogLevel('debug');
+                    // setLogLevel('debug');
                 } catch(error) {
                     console.error("Erro ao inicializar o Firebase:", error);
-                    authPage.innerHTML = `<h1>Erro de Inicialização</h1><p>Não foi possível conectar ao Firebase. Verifique o console para mais detalhes.</p>`;
+                    authPage.innerHTML = `<h1>Erro de Inicialização</h1><p>Não foi possível conectar ao Firebase.</p>`;
                     authPage.style.display = 'block';
                     return;
                 }
@@ -608,15 +634,12 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        userNameDisplay.textContent = user.displayName || 'Utilizador';
+                        userNameDisplay.textContent = user.displayName || user.email;
                         authPage.style.display = 'none';
                         appPage.style.display = 'block';
                         setupRealtimeListeners(userId);
                     } else {
-                        // If a listener is active, detach it before logging out
-                        if (unsubscribe) {
-                            unsubscribe();
-                        }
+                        if (unsubscribe) unsubscribe();
                         userId = null;
                         transacoes = [];
                         atualizarTudo();
@@ -625,24 +648,60 @@
                     }
                 });
     
-                loginBtn.addEventListener('click', async () => {
-                    loginErrorP.textContent = '';
+                googleLoginBtn.addEventListener('click', async () => {
+                    authErrorP.textContent = '';
                     const provider = new GoogleAuthProvider();
                     try {
                         await signInWithPopup(auth, provider);
                     } catch (error) {
                         console.error("Erro no login com Google:", error);
-                        loginErrorP.textContent = `Falha no login. (${error.code})`;
+                        authErrorP.textContent = `Falha no login. (${error.code})`;
                     }
                 });
+
+                loginEmailForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    authErrorP.textContent = '';
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } catch(error) {
+                        authErrorP.textContent = "E-mail ou palavra-passe inválidos.";
+                    }
+                });
+                
+                registerEmailForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    authErrorP.textContent = '';
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    if (password.length < 6) {
+                        authErrorP.textContent = "A palavra-passe deve ter pelo menos 6 caracteres.";
+                        return;
+                    }
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } catch(error) {
+                        authErrorP.textContent = `Erro ao registar. (${error.code})`;
+                    }
+                });
+
                 logoutBtn.addEventListener('click', () => signOut(auth));
+
+                showRegisterLink.addEventListener('click', () => {
+                    loginForm.classList.remove('active');
+                    registerForm.classList.add('active');
+                });
+                
+                showLoginLink.addEventListener('click', () => {
+                    registerForm.classList.remove('active');
+                    loginForm.classList.add('active');
+                });
             }
 
             function setupRealtimeListeners(uid) {
-                // Detach any existing listener
-                if (unsubscribe) {
-                    unsubscribe();
-                }
+                if (unsubscribe) unsubscribe();
                 const transacoesRef = collection(db, `users/${uid}/transacoes`);
                 
                 unsubscribe = onSnapshot(transacoesRef, (snapshot) => {
@@ -662,4 +721,4 @@
         });
     </script>
 </body>
-</html>
+</ht
