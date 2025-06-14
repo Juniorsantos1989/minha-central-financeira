@@ -41,15 +41,30 @@
         #auth-page { text-align: center; padding: 50px 20px; max-width: 450px; margin: 10vh auto; background-color: var(--container-bg); border-radius: 12px; box-shadow: 0 6px 20px var(--shadow-color); }
         #auth-page h1 { font-size: 2.2em; margin-bottom: 15px; }
         #auth-page p { font-size: 1.1em; color: var(--text-color); opacity: 0.8; margin-bottom: 30px;}
-        #login-btn { background: var(--primary-color); color: white; padding: 15px 30px; border-radius: 8px; font-size: 1.2em; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.3s, opacity 0.3s; min-width: 220px; }
-        #login-btn:hover { background-color: #2980b9; }
-        #login-btn:disabled { background-color: #7f8c8d; cursor: not-allowed; opacity: 0.7; }
+        #login-btn { 
+            background: #ffffff; 
+            color: #444; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            font-size: 1.1em; 
+            font-weight: 500; 
+            border: 1px solid #ddd; 
+            cursor: pointer; 
+            transition: background-color 0.3s, box-shadow 0.3s; 
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #login-btn:hover { background-color: #f7f7f7; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #login-btn svg { width: 24px; height: 24px; }
         #login-error { color: var(--error-color); margin-top: 15px; font-weight: bold; min-height: 20px; }
 
         /* Main application page styling */
         #app-page { display: none; }
         .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;}
-        .user-info { text-align: left; font-size: 0.8em; color: #7f8c8d; background-color: var(--bg-color); padding: 8px 12px; border-radius: 8px; word-break: break-all; flex-grow: 1; }
+        .user-info { text-align: left; font-size: 0.9em; color: var(--text-color); background-color: var(--bg-color); padding: 8px 12px; border-radius: 8px; flex-grow: 1; }
+        .user-info strong { color: var(--primary-color); }
         #logout-btn { background: var(--error-color); color: white; padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; transition: background 0.2s; }
         #logout-btn:hover { background-color: #c0392b; }
         
@@ -125,8 +140,11 @@
     <!-- Authentication Page: Shown only when the user is not logged in -->
     <div id="auth-page">
         <h1>Central Financeira</h1>
-        <p>Acesse seus dados de forma segura de qualquer lugar.</p>
-        <button id="login-btn">Acessar minha conta</button>
+        <p>Acesse os seus dados de forma segura e permanente.</p>
+        <button id="login-btn">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
+            <span>Entrar com Google</span>
+        </button>
         <p id="login-error"></p>
     </div>
 
@@ -134,7 +152,7 @@
     <div id="app-page" class="container">
         <div class="header-controls">
             <div class="user-info">
-                ID do Usuário: <span id="user-id-display">Carregando...</span>
+                Bem-vindo(a), <strong id="user-name-display"></strong>
             </div>
             <div>
                 <button id="theme-toggle" aria-label="Alternar tema">
@@ -224,7 +242,7 @@
     <script type="module">
         // Import Firebase services
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -251,6 +269,7 @@
             let filtroAtual = 'todos';
             let userId = null;
             let db, auth;
+            let unsubscribe; // To detach the Firestore listener on logout
             
             // --- 2. DOM ELEMENT SELECTORS ---
             const authPage = document.getElementById('auth-page');
@@ -258,6 +277,7 @@
             const loginBtn = document.getElementById('login-btn');
             const logoutBtn = document.getElementById('logout-btn');
             const loginErrorP = document.getElementById('login-error');
+            const userNameDisplay = document.getElementById('user-name-display');
             const dataInput = document.getElementById('data');
             const formTransacao = document.getElementById('form-transacao');
             const categoriaSelect = document.getElementById('categoria');
@@ -559,7 +579,9 @@
                 if (acaoConfirmacao.callback) acaoConfirmacao.callback();
                 modalConfirmacao.classList.remove('show');
             });
-            document.getElementById('modal-cancel').addEventListener('click', () => modalConfirmacao.classList.remove('show'));
+            document.getElementById('modal-cancel').addEventListener('click', () => {
+                modalConfirmacao.classList.remove('show');
+            });
             themeToggle.addEventListener('click', toggleTheme);
             
             // --- 5. INITIALIZATION ---
@@ -586,42 +608,44 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        document.getElementById('user-id-display').textContent = userId;
+                        userNameDisplay.textContent = user.displayName || 'Utilizador';
                         authPage.style.display = 'none';
                         appPage.style.display = 'block';
                         setupRealtimeListeners(userId);
                     } else {
+                        // If a listener is active, detach it before logging out
+                        if (unsubscribe) {
+                            unsubscribe();
+                        }
                         userId = null;
-                        authPage.style.display = 'block';
-                        appPage.style.display = 'none';
                         transacoes = [];
                         atualizarTudo();
-                        loginBtn.disabled = false;
-                        loginBtn.textContent = 'Acessar minha conta';
+                        authPage.style.display = 'block';
+                        appPage.style.display = 'none';
                     }
                 });
     
                 loginBtn.addEventListener('click', async () => {
-                    loginBtn.disabled = true;
-                    loginBtn.textContent = 'Conectando...';
                     loginErrorP.textContent = '';
-                
+                    const provider = new GoogleAuthProvider();
                     try {
-                        await signInAnonymously(auth);
+                        await signInWithPopup(auth, provider);
                     } catch (error) {
-                        console.error("Erro no login:", error);
-                        loginErrorP.textContent = `Falha no login. Verifique as chaves e regras de segurança. (${error.code})`;
-                        loginBtn.disabled = false;
-                        loginBtn.textContent = 'Acessar minha conta';
+                        console.error("Erro no login com Google:", error);
+                        loginErrorP.textContent = `Falha no login. (${error.code})`;
                     }
                 });
                 logoutBtn.addEventListener('click', () => signOut(auth));
             }
 
             function setupRealtimeListeners(uid) {
+                // Detach any existing listener
+                if (unsubscribe) {
+                    unsubscribe();
+                }
                 const transacoesRef = collection(db, `users/${uid}/transacoes`);
                 
-                onSnapshot(transacoesRef, (snapshot) => {
+                unsubscribe = onSnapshot(transacoesRef, (snapshot) => {
                     transacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     atualizarTudo();
                 }, (error) => {
@@ -638,4 +662,4 @@
         });
     </script>
 </body>
-</ht
+</html>
