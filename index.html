@@ -6,6 +6,7 @@
     <title>Central Financeira com Sincronização na Nuvem</title>
     <!-- External Libraries: Chart.js for graphs and jsPDF for PDF reports -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -476,11 +477,18 @@
                 const gastosPorSubCategoria = transacoesFiltradas
                     .filter(t => t.tipo === 'despesa' && t.subcategoria && t.subcategoria !== 'N/A')
                     .reduce((acc, t) => {
-                        const key = `${t.categoria} - ${t.subcategoria}`;
+                        const key = t.subcategoria; // Using only subcategory for cleaner labels
                         acc[key] = (acc[key] || 0) + t.valor;
                         return acc;
                     }, {});
                 const gastosSubcategoriaArray = Object.entries(gastosPorSubCategoria).sort(([, a], [, b]) => b - a);
+                
+                // Dynamic color palette for subcategories
+                const subCategoryColors = [
+                    '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', 
+                    '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9A6324', '#fffac8', '#800000', '#aaffc3',
+                    '#808000', '#ffd8b1', '#000075', '#a9a9a9' 
+                ];
 
                 if (chartInstances.topSubDespesas) chartInstances.topSubDespesas.destroy();
                 chartInstances.topSubDespesas = new Chart(document.getElementById('topSubDespesasChart'), {
@@ -488,12 +496,8 @@
                     data: {
                         labels: gastosSubcategoriaArray.map(item => item[0]),
                         datasets: [{
-                            label: 'Gasto por Subcategoria',
                             data: gastosSubcategoriaArray.map(item => item[1]),
-                            backgroundColor: [
-                                '#c0392b', '#e74c3c', '#d35400', '#f39c12', '#f1c40f',
-                                '#7f8c8d', '#95a5a6', '#bdc3c7', '#34495e', '#2c3e50'
-                            ], // Extended color palette
+                            backgroundColor: subCategoryColors,
                             borderColor: getComputedStyle(document.documentElement).getPropertyValue('--container-bg'),
                             borderWidth: 4
                         }]
@@ -501,8 +505,33 @@
                     options: { 
                         responsive: true, 
                         maintainAspectRatio: false, 
-                        plugins: { legend: { position: 'bottom', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-color') } } }
-                    }
+                        plugins: { 
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { 
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-color'),
+                                    boxWidth: 20
+                                } 
+                            },
+                            datalabels: {
+                                formatter: (value, ctx) => {
+                                    const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                    const percentage = (value * 100 / sum);
+                                    return percentage > 3 ? percentage.toFixed(1) + '%' : '';
+                                },
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold'
+                                },
+                                textStrokeColor: 'black',
+                                textStrokeWidth: 1,
+                                anchor: 'end',
+                                align: 'start',
+                                offset: -10
+                            }
+                        }
+                    },
+                    plugins: [ChartDataLabels]
                 });
 
                 // Pie Chart: Income Distribution
@@ -955,4 +984,3 @@
     </script>
 </body>
 </html>
-
