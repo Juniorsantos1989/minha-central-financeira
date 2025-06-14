@@ -448,6 +448,7 @@
                         </td>`;
                     corpoTabela.appendChild(linha);
                 });
+                const corpoTabelaCompras = document.getElementById('corpo-tabela-compras');
                 corpoTabelaCompras.innerHTML = '';
                 compras.sort((a, b) => b.id - a.id).forEach(c => {
                     const linha = document.createElement('tr');
@@ -568,9 +569,9 @@
             document.body.addEventListener('click', (e) => {
                 const editBtn = e.target.closest('.acao-editar');
                 const deleteBtn = e.target.closest('.acao-deletar');
-                if (editBtn) iniciarEdicao(editBtn.dataset.id);
+                if (editBtn) iniciarEdicao(parseInt(editBtn.dataset.id));
                 if (deleteBtn) {
-                    const id = deleteBtn.dataset.id;
+                    const id = parseInt(deleteBtn.dataset.id);
                     const type = deleteBtn.dataset.type;
                     const cb = type === 'transacao' ? async () => {
                         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
