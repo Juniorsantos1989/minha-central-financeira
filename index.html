@@ -138,13 +138,14 @@
         
         /* --- NOVO: Estilos para a Página de Orçamentos --- */
         #lista-orcamentos { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 30px; }
-        .orcamento-item { background-color: var(--bg-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .orcamento-item { background-color: var(--bg-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 10px; position: relative; }
         .orcamento-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .orcamento-header .categoria { font-size: 1.2em; }
         .orcamento-valores { font-size: 0.9em; color: var(--text-color); }
         .progress-bar-container { width: 100%; background-color: var(--border-color); border-radius: 5px; height: 12px; overflow: hidden; }
         .progress-bar { height: 100%; background-color: var(--primary-color); border-radius: 5px; transition: width 0.5s ease-in-out; }
         .progress-bar.over { background-color: var(--error-color); }
+        .orcamento-item .acoes { position: absolute; top: 5px; right: 5px; } /* Posiciona o botão de deletar */
     </style>
 </head>
 <body>
@@ -506,7 +507,7 @@
                 const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
                 const transacoesMesAtual = transacoes.filter(t => new Date(t.data + 'T00:00:00') >= primeiroDiaMes);
 
-                orcamentos.forEach(orc => {
+                orcamentos.sort((a, b) => a.categoria.localeCompare(b.categoria)).forEach(orc => {
                     const gastoNaCategoria = transacoesMesAtual
                         .filter(t => t.tipo === 'despesa' && t.categoria === orc.categoria)
                         .reduce((acc, t) => acc + t.valor, 0);
@@ -526,7 +527,9 @@
                         <div class="progress-bar-container">
                             <div class="progress-bar ${porcentagem > 100 ? 'over' : ''}" style="width: ${progresso}%;"></div>
                         </div>
-                        <button class="acao-deletar" data-type="orcamento" aria-label="Deletar Orçamento" data-id="${orc.id}"><svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg></button>
+                        <div class="acoes">
+                            <button class="acao-deletar" data-type="orcamento" aria-label="Deletar Orçamento" data-id="${orc.id}"><svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg></button>
+                        </div>
                     `;
                     listaOrcamentos.appendChild(itemOrcamento);
                 });
@@ -749,7 +752,9 @@
                     modalTexto.textContent = `Tem certeza que deseja excluir este ${type === 'orcamento' ? 'orçamento' : 'item'}?`;
                     acaoConfirmacao.callback = async () => {
                         const collectionName = type === 'transacao' ? 'transacoes' : 'orcamentos';
-                        const docRef = doc(db, `users/${userId}/${collectionName}`, id);
+                        // Para orçamentos, o ID é a própria categoria
+                        const docId = type === 'orcamento' ? id : id;
+                        const docRef = doc(db, `users/${userId}/${collectionName}`, docId);
                         try { await deleteDoc(docRef); } catch (error) { console.error("Erro ao deletar:", error); }
                     };
                     modalConfirmacao.classList.add('show');
@@ -804,12 +809,56 @@
                     }
                 });
     
-                googleLoginBtn.addEventListener('click', async () => { /* ... */ });
-                loginEmailForm.addEventListener('submit', async (e) => { /* ... */ });
-                registerEmailForm.addEventListener('submit', async (e) => { /* ... */ });
+                googleLoginBtn.addEventListener('click', async () => {
+                    authErrorP.textContent = '';
+                    const provider = new GoogleAuthProvider();
+                    try {
+                        await signInWithPopup(auth, provider);
+                    } catch (error) {
+                        console.error("Erro no login com Google:", error);
+                        authErrorP.textContent = `Falha no login. (${error.code})`;
+                    }
+                });
+
+                loginEmailForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    authErrorP.textContent = '';
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } catch(error) {
+                        authErrorP.textContent = "E-mail ou palavra-passe inválidos.";
+                    }
+                });
+                
+                registerEmailForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    authErrorP.textContent = '';
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    if (password.length < 6) {
+                        authErrorP.textContent = "A palavra-passe deve ter pelo menos 6 caracteres.";
+                        return;
+                    }
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } catch(error) {
+                        authErrorP.textContent = `Erro ao registar. (${error.code})`;
+                    }
+                });
+
                 logoutBtn.addEventListener('click', () => signOut(auth));
-                showRegisterLink.addEventListener('click', () => { /* ... */ });
-                showLoginLink.addEventListener('click', () => { /* ... */ });
+
+                showRegisterLink.addEventListener('click', () => {
+                    loginForm.classList.remove('active');
+                    registerForm.classList.add('active');
+                });
+                
+                showLoginLink.addEventListener('click', () => {
+                    registerForm.classList.remove('active');
+                    loginForm.classList.add('active');
+                });
             }
 
             function setupRealtimeListeners(uid) {
