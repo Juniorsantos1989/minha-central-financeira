@@ -269,6 +269,7 @@
                 <div class="chart-card"><h3>Evolução do Saldo (Últimos 6 Meses)</h3><canvas id="saldoEvolucaoChart"></canvas></div>
                 <div class="chart-card"><h3>Receitas vs. Despesas</h3><canvas id="receitaDespesaChart"></canvas></div>
                 <div class="chart-card"><h3>Top 5 Categorias de Despesa</h3><canvas id="topDespesasChart"></canvas></div>
+                <div class="chart-card"><h3>Top 5 Subcategorias de Despesa</h3><canvas id="topSubDespesasChart"></canvas></div>
                 <div class="chart-card"><h3>Distribuição de Receitas</h3><canvas id="receitaCategoriaChart"></canvas></div>
             </div>
         </div>
@@ -440,6 +441,36 @@
                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-color') }}, x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-color') }}} }
                 });
 
+                // Bar Chart: Top 5 Expense Subcategories
+                const gastosPorSubCategoria = transacoesFiltradas
+                    .filter(t => t.tipo === 'despesa' && t.subcategoria && t.subcategoria !== 'N/A')
+                    .reduce((acc, t) => {
+                        const key = `${t.categoria} - ${t.subcategoria}`;
+                        acc[key] = (acc[key] || 0) + t.valor;
+                        return acc;
+                    }, {});
+                const top5SubGastos = Object.entries(gastosPorSubCategoria).sort(([, a], [, b]) => b - a).slice(0, 5);
+
+                if (chartInstances.topSubDespesas) chartInstances.topSubDespesas.destroy();
+                chartInstances.topSubDespesas = new Chart(document.getElementById('topSubDespesasChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: top5SubGastos.map(item => item[0]),
+                        datasets: [{
+                            label: 'Gasto por Subcategoria',
+                            data: top5SubGastos.map(item => item[1]),
+                            backgroundColor: '#c0392b' // Darker red
+                        }]
+                    },
+                    options: { 
+                        indexAxis: 'y', 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false } }, 
+                        scales: { y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-color') }}, x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-color') }}} 
+                    }
+                });
+
                 // Pie Chart: Income Distribution
                 const receitasPorCategoria = transacoesFiltradas.filter(t => t.tipo === 'receita').reduce((acc, t) => { acc[t.categoria] = (acc[t.categoria] || 0) + t.valor; return acc; }, {});
                 if (chartInstances.receitaCategoria) chartInstances.receitaCategoria.destroy();
@@ -463,10 +494,8 @@
                 const saldoMensal = [];
                 let saldoAcumulado = 0;
 
-                // Get all transactions sorted by date
                 const todasAsTransacoes = [...transacoes].sort((a, b) => new Date(a.data) - new Date(b.data));
                 
-                // Calculate initial balance from transactions before the 6-month window
                 const seisMesesAtras = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1);
                 const transacoesAnteriores = todasAsTransacoes.filter(t => new Date(t.data) < seisMesesAtras);
                 saldoAcumulado = transacoesAnteriores.reduce((acc, t) => acc + (t.tipo === 'receita' ? t.valor : -t.valor), 0);
