@@ -224,7 +224,7 @@
     <script type="module">
         // Import Firebase services
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -381,14 +381,13 @@
                 
                 if (!transacaoData.valor || !transacaoData.data || !transacaoData.categoria) return;
                 
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const transacoesRef = collection(db, `users/${userId}/transacoes`);
                 
                 try {
                     if (modoEdicao.ativo) {
-                        const docRef = doc(db, `artifacts/${appId}/users/${userId}/transacoes`, modoEdicao.id);
+                        const docRef = doc(db, `users/${userId}/transacoes`, modoEdicao.id);
                         await updateDoc(docRef, transacaoData);
                     } else {
-                        const transacoesRef = collection(db, `artifacts/${appId}/users/${userId}/transacoes`);
                         await addDoc(transacoesRef, transacaoData);
                     }
                     cancelarEdicao();
@@ -533,9 +532,9 @@
                 if (deleteBtn) {
                     const id = deleteBtn.dataset.id;
                     acaoConfirmacao.callback = async () => {
-                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                        const docRef = doc(db, `users/${userId}/transacoes`, id);
                         try {
-                            await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/transacoes`, id));
+                            await deleteDoc(docRef);
                         } catch (error) {
                             console.error("Erro ao deletar:", error);
                         }
@@ -552,11 +551,23 @@
             themeToggle.addEventListener('click', toggleTheme);
             
             // --- 5. INITIALIZATION ---
-            async function initApp() {
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-                if (!firebaseConfig) {
-                    console.error("Configuração do Firebase não encontrada.");
-                    authPage.innerHTML = "<h1>Erro de Configuração</h1><p>Não foi possível conectar ao serviço. Verifique as configurações do ambiente.</p>";
+            function initApp() {
+                
+                // !!!!! COLE AQUI A CONFIGURAÇÃO DO SEU FIREBASE !!!!!
+                const firebaseConfig = {
+                  apiKey: "AIzaSyBLP6bPmuHZwVAOggZw20lG-COJBfRO9ls",
+                  authDomain: "controle-financeiro-72771.firebaseapp.com",
+                  projectId: "controle-financeiro-72771",
+                  storageBucket: "controle-financeiro-72771.firebasestorage.app",
+                  messagingSenderId: "1015407681813",
+                  appId: "1:1015407681813:web:7177b5632fdff543a6091c"
+                };
+                // !!!!! FIM DA ÁREA DE CONFIGURAÇÃO !!!!!
+
+
+                if (!firebaseConfig || firebaseConfig.apiKey === "SUA_API_KEY") {
+                    console.error("Configuração do Firebase não encontrada ou não preenchida.");
+                    authPage.innerHTML = "<h1>Erro de Configuração</h1><p>As chaves do Firebase não foram preenchidas no código. Edite o arquivo HTML, adicione sua configuração e atualize o site.</p>";
                     authPage.style.display = 'block';
                     return;
                 }
@@ -597,14 +608,10 @@
                     loginErrorP.textContent = '';
                 
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        await signInAnonymously(auth);
                     } catch (error) {
                         console.error("Erro no login:", error);
-                        loginErrorP.textContent = `Falha no login. Verifique se a Autenticação Anônima está ativa no Firebase. (${error.code})`;
+                        loginErrorP.textContent = `Falha no login. Verifique as chaves e regras de segurança. (${error.code})`;
                         loginBtn.disabled = false;
                         loginBtn.textContent = 'Acessar minha conta';
                     }
@@ -613,14 +620,14 @@
             }
 
             function setupRealtimeListeners(uid) {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const transacoesRef = collection(db, `artifacts/${appId}/users/${uid}/transacoes`);
+                const transacoesRef = collection(db, `users/${uid}/transacoes`);
                 
                 onSnapshot(transacoesRef, (snapshot) => {
                     transacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     atualizarTudo();
                 }, (error) => {
                     console.error("Erro no listener de transações: ", error);
+                    alert(`Não foi possível carregar os dados. Verifique a aba "Regras" no seu Firestore. Erro: ${error.message}`);
                 });
             }
 
