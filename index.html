@@ -91,6 +91,8 @@
         .form-container button { flex-grow: 1; padding: 12px 25px; border: none; color: var(--white-color); border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: all 0.2s; }
         #submit-btn { background: linear-gradient(45deg, var(--primary-color), #5dade2); }
         #cancel-edit-btn { background-color: #bdc3c7; display: none; }
+        #form-compras button { background: linear-gradient(45deg, #1abc9c, #16a085); }
+
         
         /* Summary cards */
         #resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
@@ -187,6 +189,7 @@
         <nav>
             <button class="nav-btn active" data-page="lancamentos">Lançamentos</button>
             <button class="nav-btn" data-page="graficos">Dashboard</button>
+            <button class="nav-btn" data-page="orcamentos">Orçamentos</button>
         </nav>
 
         <!-- Transactions Page -->
@@ -246,6 +249,26 @@
                 <div class="chart-card"><h3>Top 5 Categorias de Despesa</h3><canvas id="topDespesasChart"></canvas></div>
             </div>
         </div>
+
+        <!-- Budgets Page -->
+        <div id="page-orcamentos" class="page">
+            <h2>Orçamentos e Compras Avulsas</h2>
+            <p>Use esta seção para registar compras que não são despesas recorrentes.</p>
+            <form id="form-compras" class="form-container">
+                <input type="text" id="compra-descricao" placeholder="Descrição do Item" required>
+                <input type="number" id="compra-valor" placeholder="Valor Unitário" step="0.01" required>
+                <input type="number" id="compra-quantidade" placeholder="Quantidade" step="1" value="1" required>
+                <div class="form-buttons">
+                    <button type="submit">Adicionar Compra</button>
+                </div>
+            </form>
+            <div class="tabela-container">
+                <table>
+                    <thead><tr><th>Descrição</th><th>Valor Unitário</th><th>Qtd.</th><th>Total</th><th>Ação</th></tr></thead>
+                    <tbody id="corpo-tabela-compras"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
     
     <!-- Confirmation Modal -->
@@ -283,13 +306,15 @@
             const categoriasReceita = {'Salário': ['N/A'],'Vendas': ['N/A'],'Renda Extra': ['Freelance', 'Aluguel Recebido', 'Outros'],'Investimentos': ['Dividendos', 'Juros', 'Venda de Ativo']};
             
             let transacoes = [];
+            let compras = [];
             let modoEdicao = { ativo: false, id: null };
             let acaoConfirmacao = { callback: null };
             let chartInstances = {};
             let filtroAtual = 'todos';
             let userId = null;
             let db, auth;
-            let unsubscribe; 
+            let unsubscribeTransacoes; 
+            let unsubscribeCompras;
             
             // --- 2. DOM ELEMENT SELECTORS ---
             const authPage = document.getElementById('auth-page');
@@ -300,6 +325,7 @@
             const userNameDisplay = document.getElementById('user-name-display');
             const dataInput = document.getElementById('data');
             const formTransacao = document.getElementById('form-transacao');
+            const formCompras = document.getElementById('form-compras');
             const categoriaSelect = document.getElementById('categoria');
             const subcategoriaSelect = document.getElementById('subcategoria');
             const modalConfirmacao = document.getElementById('modal-confirmacao');
@@ -309,6 +335,7 @@
             const periodoFiltroSelect = document.getElementById('periodo-filtro');
             const exportPdfBtn = document.getElementById('export-pdf');
             const corpoTabela = document.getElementById('corpo-tabela');
+            const corpoTabelaCompras = document.getElementById('corpo-tabela-compras');
             const formTitle = document.getElementById('form-title');
             const submitBtn = document.getElementById('submit-btn');
             const cancelEditBtn = document.getElementById('cancel-edit-btn');
@@ -454,6 +481,31 @@
                 }
             };
 
+            const handleCompraSubmit = async (e) => {
+                e.preventDefault();
+                if (!userId) return;
+
+                const compraData = {
+                    descricao: document.getElementById('compra-descricao').value.trim(),
+                    valor: parseFloat(document.getElementById('compra-valor').value.trim()),
+                    quantidade: parseInt(document.getElementById('compra-quantidade').value.trim()),
+                    timestamp: new Date()
+                };
+
+                if (!compraData.descricao || !compraData.valor || !compraData.quantidade) return;
+                
+                const basePath = `users/${userId}/compras`;
+                
+                try {
+                    const comprasRef = collection(db, basePath);
+                    await addDoc(comprasRef, compraData);
+                    formCompras.reset();
+                    document.getElementById('compra-quantidade').value = 1;
+                } catch (error) {
+                    console.error("Erro ao salvar compra:", error);
+                }
+            };
+
             const iniciarEdicao = (id) => {
                 const t = transacoes.find(a => a.id === id);
                 if (!t) return;
@@ -502,10 +554,26 @@
                             <td>${new Date(t.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                             <td class="acoes">
                                 <button class="acao-editar" aria-label="Editar" data-id="${t.id}"><svg viewBox="0 0 512 512"><path d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"/></svg></button>
-                                <button class="acao-deletar" aria-label="Deletar" data-id="${t.id}"><svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg></button>
+                                <button class="acao-deletar" data-type="transacao" aria-label="Deletar" data-id="${t.id}"><svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg></button>
                             </td>`;
                         corpoTabela.appendChild(linha);
                     });
+
+                corpoTabelaCompras.innerHTML = '';
+                compras.sort((a,b) => b.timestamp - a.timestamp)
+                    .forEach(c => {
+                        const linha = document.createElement('tr');
+                        linha.innerHTML = `
+                            <td>${c.descricao}</td>
+                            <td>${formatCurrency(c.valor)}</td>
+                            <td>${c.quantidade}</td>
+                            <td>${formatCurrency(c.valor * c.quantidade)}</td>
+                            <td class="acoes">
+                                <button class="acao-deletar" data-type="compra" aria-label="Deletar" data-id="${c.id}"><svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg></button>
+                            </td>`;
+                        corpoTabelaCompras.appendChild(linha);
+                    });
+
 
                 if (document.getElementById('page-graficos').classList.contains('active')) {
                     renderDashboard();
@@ -573,6 +641,7 @@
             // --- 4. EVENT LISTENERS ---
             document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
             formTransacao.addEventListener('submit', handleFormSubmit);
+            formCompras.addEventListener('submit', handleCompraSubmit);
             cancelEditBtn.addEventListener('click', cancelarEdicao);
             document.querySelectorAll('input[name="tipo"]').forEach(radio => radio.addEventListener('change', atualizarCategorias));
             categoriaSelect.addEventListener('change', atualizarSubcategorias);
@@ -589,8 +658,11 @@
                 
                 if (deleteBtn) {
                     const id = deleteBtn.dataset.id;
+                    const type = deleteBtn.dataset.type;
+                    
                     acaoConfirmacao.callback = async () => {
-                        const docRef = doc(db, `users/${userId}/transacoes`, id);
+                        const collectionName = type === 'transacao' ? 'transacoes' : 'compras';
+                        const docRef = doc(db, `users/${userId}/${collectionName}`, id);
                         try {
                             await deleteDoc(docRef);
                         } catch (error) {
@@ -612,7 +684,7 @@
             
             // --- 5. INITIALIZATION & AUTH ---
             function initApp() {
-                if (!firebaseConfig || firebaseConfig.apiKey.startsWith("AIzaSyA")) { // Simple check
+                if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.includes("SUA_API_KEY")) {
                     console.error("Configuração do Firebase não encontrada ou não preenchida.");
                     authPage.innerHTML = "<h1>Erro de Configuração</h1><p>As chaves do Firebase não foram preenchidas no código.</p>";
                     authPage.style.display = 'block';
@@ -639,9 +711,11 @@
                         appPage.style.display = 'block';
                         setupRealtimeListeners(userId);
                     } else {
-                        if (unsubscribe) unsubscribe();
+                        if (unsubscribeTransacoes) unsubscribeTransacoes();
+                        if (unsubscribeCompras) unsubscribeCompras();
                         userId = null;
                         transacoes = [];
+                        compras = [];
                         atualizarTudo();
                         authPage.style.display = 'block';
                         appPage.style.display = 'none';
@@ -701,15 +775,23 @@
             }
 
             function setupRealtimeListeners(uid) {
-                if (unsubscribe) unsubscribe();
+                if (unsubscribeTransacoes) unsubscribeTransacoes();
                 const transacoesRef = collection(db, `users/${uid}/transacoes`);
-                
-                unsubscribe = onSnapshot(transacoesRef, (snapshot) => {
+                unsubscribeTransacoes = onSnapshot(transacoesRef, (snapshot) => {
                     transacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     atualizarTudo();
                 }, (error) => {
                     console.error("Erro no listener de transações: ", error);
                     alert(`Não foi possível carregar os dados. Verifique a aba "Regras" no seu Firestore. Erro: ${error.message}`);
+                });
+
+                if (unsubscribeCompras) unsubscribeCompras();
+                const comprasRef = collection(db, `users/${uid}/compras`);
+                unsubscribeCompras = onSnapshot(comprasRef, (snapshot) => {
+                    compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    atualizarTudo();
+                }, (error) => {
+                    console.error("Erro no listener de compras: ", error);
                 });
             }
 
