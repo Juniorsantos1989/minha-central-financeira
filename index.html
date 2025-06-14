@@ -229,6 +229,17 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             // --- 1. CONFIGURATION AND STATE VARIABLES ---
+            
+            // This configuration connects the app to your specific Firebase project.
+            const firebaseConfig = {
+              apiKey: "AIzaSyBLP6bPmuHZwVAOggZw20lG-COJBfRO9ls",
+              authDomain: "controle-financeiro-72771.firebaseapp.com",
+              projectId: "controle-financeiro-72771",
+              storageBucket: "controle-financeiro-72771.appspot.com", 
+              messagingSenderId: "1015407681813",
+              appId: "1:1015407681813:web:7177b5632fdff543a6091c"
+            };
+
             const { jsPDF } = window.jspdf;
             const categoriasDespesa = {'Moradia': ['Aluguel', 'Condomínio', 'Luz', 'Água', 'Gás', 'Internet', 'Manutenção'],'Alimentação': ['Supermercado', 'Restaurante', 'Delivery', 'Lanche'],'Transporte': ['Combustível', 'Transporte Público', 'Uber/99', 'Manutenção Veículo'],'Lazer': ['Cinema', 'Viagem', 'Shows', 'Streaming', 'Hobbies'],'Saúde': ['Farmácia', 'Consulta Médica', 'Plano de Saúde'],'Educação': ['Cursos', 'Livros', 'Mensalidade'],'Compras': ['Roupas', 'Eletrônicos', 'Presentes'],'Outros': ['N/A']};
             const categoriasReceita = {'Salário': ['N/A'],'Vendas': ['N/A'],'Renda Extra': ['Freelance', 'Aluguel Recebido', 'Outros'],'Investimentos': ['Dividendos', 'Juros', 'Venda de Ativo']};
@@ -381,13 +392,15 @@
                 
                 if (!transacaoData.valor || !transacaoData.data || !transacaoData.categoria) return;
                 
-                const transacoesRef = collection(db, `users/${userId}/transacoes`);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+                const basePath = `artifacts/${appId}/users/${userId}/transacoes`;
                 
                 try {
                     if (modoEdicao.ativo) {
-                        const docRef = doc(db, `users/${userId}/transacoes`, modoEdicao.id);
+                        const docRef = doc(db, basePath, modoEdicao.id);
                         await updateDoc(docRef, transacaoData);
                     } else {
+                        const transacoesRef = collection(db, basePath);
                         await addDoc(transacoesRef, transacaoData);
                     }
                     cancelarEdicao();
@@ -532,7 +545,8 @@
                 if (deleteBtn) {
                     const id = deleteBtn.dataset.id;
                     acaoConfirmacao.callback = async () => {
-                        const docRef = doc(db, `users/${userId}/transacoes`, id);
+                        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+                        const docRef = doc(db, `artifacts/${appId}/users/${userId}/transacoes`, id);
                         try {
                             await deleteDoc(docRef);
                         } catch (error) {
@@ -552,19 +566,6 @@
             
             // --- 5. INITIALIZATION ---
             function initApp() {
-                
-                // !!!!! COLE AQUI A CONFIGURAÇÃO DO SEU FIREBASE !!!!!
-                const firebaseConfig = {
-                  apiKey: "AIzaSyBLP6bPmuHZwVAOggZw20lG-COJBfRO9ls",
-                  authDomain: "controle-financeiro-72771.firebaseapp.com",
-                  projectId: "controle-financeiro-72771",
-                  storageBucket: "controle-financeiro-72771.firebasestorage.app",
-                  messagingSenderId: "1015407681813",
-                  appId: "1:1015407681813:web:7177b5632fdff543a6091c"
-                };
-                // !!!!! FIM DA ÁREA DE CONFIGURAÇÃO !!!!!
-
-
                 if (!firebaseConfig || firebaseConfig.apiKey === "SUA_API_KEY") {
                     console.error("Configuração do Firebase não encontrada ou não preenchida.");
                     authPage.innerHTML = "<h1>Erro de Configuração</h1><p>As chaves do Firebase não foram preenchidas no código. Edite o arquivo HTML, adicione sua configuração e atualize o site.</p>";
@@ -620,7 +621,8 @@
             }
 
             function setupRealtimeListeners(uid) {
-                const transacoesRef = collection(db, `users/${uid}/transacoes`);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+                const transacoesRef = collection(db, `artifacts/${appId}/users/${uid}/transacoes`);
                 
                 onSnapshot(transacoesRef, (snapshot) => {
                     transacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
